@@ -1,35 +1,75 @@
-# X Vibe Check (x-roaster)
+# Nuxt Minimal Starter
 
-A Nuxt 3 application that uses OpenAI to "roast" Twitter/X profiles based on user-provided content.
+Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
 
 ## Setup
 
-1.  **Install Dependencies**:
-    ```bash
-    npm install
-    ```
+Make sure to install dependencies:
 
-2.  **Environment Variables**:
-    Create a `.env` file in the root directory and add your OpenAI API key:
-    ```env
-    OPENAI_API_KEY=sk-proj-your-key-here...
-    ```
+```bash
+# npm
+npm install
 
-3.  **Run Development Server**:
-    ```bash
-    npm run dev
-    ```
+# pnpm
+pnpm install
 
-## Features
+# yarn
+yarn install
 
--   **Roast API**: Server-side API (`/api/roast`) that uses GPT-4o-mini to generate sarcastic profiles.
--   **Frontend**: Tailwind CSS styled interface with "hacker" aesthetic.
--   **Image Generation**: Uses `html2canvas` to save the roast as an image.
--   **Confetti**: Celebration effect on successful roast.
+# bun
+bun install
+```
 
-## Tech Stack
+## Development Server
 
--   Nuxt 3
--   Tailwind CSS
--   OpenAI API
--   Vue 3
+Start the development server on `http://localhost:3000`:
+
+```bash
+# npm
+npm run dev
+
+# pnpm
+pnpm dev
+
+# yarn
+yarn dev
+
+# bun
+bun run dev
+```
+
+## Production
+
+Build the application for production:
+
+```bash
+# npm
+npm run build
+
+# pnpm
+pnpm build
+
+# yarn
+yarn build
+
+# bun
+bun run build
+```
+
+Locally preview production build:
+
+```bash
+# npm
+npm run preview
+
+# pnpm
+pnpm preview
+
+# yarn
+yarn preview
+
+# bun
+bun run preview
+```
+
+Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
