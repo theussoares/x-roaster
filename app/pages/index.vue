@@ -14,6 +14,9 @@
             <p class="text-text-muted">Modelo: Camiseta Tradicional Masculina</p>
         </div>
         <div class="flex gap-4">
+            <NuxtLink to="/pg" class="btn-primary py-2 px-4 text-sm" style="text-decoration:none">
+              ⛪ PG Connect
+            </NuxtLink>
             <NuxtLink to="/fishing" class="btn-primary py-2 px-4 text-sm" style="text-decoration:none">
               🎣 Jogo da Pesca
             </NuxtLink>
