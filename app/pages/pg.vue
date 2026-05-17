@@ -228,7 +228,11 @@
                       </span>
                     </div>
                     <div class="sug-right">
-                      <span v-if="isNeighborhoodMatch(visitor.bairro, pg.bairro)" class="match-badge">mesmo bairro</span>
+                      <span
+                        v-if="proximityLabel(visitor.bairro, pg.bairro)"
+                        class="match-badge"
+                        :class="{ 'nearby-badge': !isNeighborhoodMatch(visitor.bairro, pg.bairro) }"
+                      >{{ proximityLabel(visitor.bairro, pg.bairro) }}</span>
                       <button @click="assignVisitor(visitor.id, pg.id)" class="btn-assign">Atribuir</button>
                     </div>
                   </div>
@@ -421,6 +425,55 @@ const PG_COLORS = [
   '#ef4444', '#06b6d4', '#f97316', '#84cc16',
   '#ec4899', '#14b8a6'
 ]
+
+/* Distância aproximada de cada bairro de Três Lagoas ao centro (km).
+   Usado para ranquear PGs por proximidade quando o bairro do visitante
+   não coincide exatamente com o do PG. */
+const BAIRROS_KM: Record<string, number> = {
+  'Alto da Boa Vista': 7, 'Alto dos Ipês': 7,
+  'Bairro Santos Dumont': 5, 'Bela Vista da Lagoa': 6,
+  'Bosque das Araras': 4, 'Carioca': 5, 'Centro': 0,
+  'Chácara Imperial': 6, 'COHAB Jardim Caçula': 4, 'Colinos': 2,
+  'Conjunto Habitacional Imperial': 6, 'Distrito Industrial II': 10,
+  'Distrito Industrial Varginha': 14, 'Dourado': 5, 'Interlagos': 4,
+  'Ipê': 7, 'Jardim Aeroporto': 8, 'Jardim Alvorada': 3,
+  'Jardim Angélica': 3, 'Jardim Bela Vista': 6, 'Jardim Brasília': 3,
+  'Jardim Cangalha': 4, 'Jardim Capilé': 5, 'Jardim Carandá': 6,
+  'Jardim das Acácias': 5, 'Jardim das Américas': 6,
+  'Jardim das Oliveiras': 6, 'Jardim das Orquídeas': 6,
+  'Jardim das Ortências': 7, 'Jardim das Paineiras': 5,
+  'Jardim das Violetas': 6, 'Jardim Dourados': 5,
+  'Jardim Esperança': 7, 'Jardim Flamboyant': 5,
+  'Jardim Guaporé': 6, 'Jardim Guaporé II': 7,
+  'Jardim Independência II': 7, 'Jardim Itamarati': 6,
+  'Jardim JK': 5, 'Jardim Maristela': 5, 'Jardim Moçambique': 7,
+  'Jardim Morumbi': 5, 'Jardim Noroeste': 7,
+  'Jardim Nova Americana': 8, 'Jardim Nova Ipanema': 6,
+  'Jardim Novo Aeroporto': 8, 'Jardim Oiti': 7,
+  'Jardim Paranapunga': 5, 'Jardim Planalto': 5,
+  'Jardim Primavera': 6, 'Jardim Primaveril': 4,
+  'Jardim Progresso': 4, 'Jardim Residencial Atenas': 8,
+  'Jardim Rodrigues': 6, 'Jardim Roriz': 6,
+  'Jardim Santa Aurélia': 5, 'Jardim Santa Júlia': 4,
+  'Jardim Santa Lourdes': 5, 'Jardim Santo André': 7,
+  'Jardim Vila Verde': 8, 'Jupiá': 8, 'Lapa': 4,
+  'Loteamento Montanini': 7, 'Nossa Senhora Aparecida': 4,
+  'Nossa Senhora das Graças': 5, 'Nova Europa': 8,
+  'Nova Três Lagoas': 6, 'Novo Oeste': 7, 'Novo Oeste II': 8,
+  'Parque das Mangueiras': 7, 'Parque Residencial Jamel Ville': 8,
+  'Parque Residencial Jamel Ville II': 8,
+  'Parque Residencial Orestes Prata Tibery Junior': 7,
+  'Parque Residencial Osmar Dutra': 7,
+  'Parque Residencial Quinta da Lagoa': 6, 'Parque São Carlos': 5,
+  'Portal das Águas': 9, 'Recanto das Palmeiras': 8,
+  'Residencial Costa Leste': 9, 'Residencial Villa Dumont': 7,
+  'Santa Luzia': 3, 'Santa Rita': 5, 'Santos Dumont': 5,
+  'São Jorge': 6, 'SETSUL': 8, 'Vila Clementina': 4,
+  'Vila Coimbra': 4, 'Vila dos Ferroviários': 3, 'Vila Guanabara': 4,
+  'Vila Haro': 4, 'Vila Maria': 5, 'Vila Nova': 2, 'Vila Piloto': 6,
+  'Vila Popular': 5, 'Vila Santana': 3, 'Vila São João': 4,
+  'Vila São José': 5, 'Vila Terezinha': 4, 'Village do Lago': 8,
+}
 
 const FILTERS: { value: FilterValue; label: string }[] = [
   { value: 'all',      label: 'Todos' },
@@ -632,7 +685,7 @@ function parseVisitantes() {
 function normalize(s: string) {
   return s.toLowerCase()
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[̀-ͯ]/g, '') // remove acentos (combining diacritics)
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -644,10 +697,41 @@ function isNeighborhoodMatch(visitorBairro: string, pgBairro: string) {
   return vb === pb || vb.includes(pb) || pb.includes(vb)
 }
 
+function getDistKm(bairro: string): number | null {
+  const nb = normalize(bairro)
+  for (const [name, km] of Object.entries(BAIRROS_KM)) {
+    if (normalize(name) === nb) return km
+  }
+  // fallback: partial match (e.g. "montanino" → "Loteamento Montanini")
+  for (const [name, km] of Object.entries(BAIRROS_KM)) {
+    const nn = normalize(name)
+    if (nn.includes(nb) || nb.includes(nn)) return km
+  }
+  return null
+}
+
 function getSuggestions(bairro: string): PG[] {
-  const matches = pgs.value.filter(pg => isNeighborhoodMatch(bairro, pg.bairro))
-  const rest    = pgs.value.filter(pg => !matches.includes(pg)).sort((a, b) => a.nome.localeCompare(b.nome))
-  return [...matches, ...rest].slice(0, 3)
+  const visitorKm = getDistKm(bairro)
+
+  return pgs.value
+    .map(pg => {
+      if (isNeighborhoodMatch(bairro, pg.bairro)) return { pg, score: -1 } // sempre primeiro
+      const pgKm = getDistKm(pg.bairro)
+      if (visitorKm !== null && pgKm !== null) return { pg, score: Math.abs(visitorKm - pgKm) }
+      return { pg, score: 999 }
+    })
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 3)
+    .map(r => r.pg)
+}
+
+/* Retorna o label de proximidade para mostrar no badge da sugestão */
+function proximityLabel(visitorBairro: string, pgBairro: string): string | null {
+  if (isNeighborhoodMatch(visitorBairro, pgBairro)) return 'mesmo bairro'
+  const vk = getDistKm(visitorBairro)
+  const pk = getDistKm(pgBairro)
+  if (vk !== null && pk !== null && Math.abs(vk - pk) <= 2) return 'bairros próximos'
+  return null
 }
 
 /* ─── Assignment ─── */
@@ -1359,6 +1443,10 @@ async function copyToClipboard() {
   background: rgba(16,185,129,0.15);
   padding: 0.15rem 0.5rem;
   border-radius: 20px;
+}
+.nearby-badge {
+  color: #06b6d4;
+  background: rgba(6,182,212,0.12);
 }
 
 .btn-assign {
